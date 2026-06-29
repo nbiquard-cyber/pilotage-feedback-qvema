@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>QVEMA Amplify — Pilotage des feedbacks</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js"></script>
+<style>
+  :root{--navy:#1F3A5F;--navy2:#2E5685;--gold:#C8A24B;--bg:#F4F1EA;--card:#fff;--line:#E3E6EB;--txt:#1F2937;--muted:#6B7280;--teal:#1D9E75;--coral:#D85A30;--purple:#7F77DD;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter','Segoe UI',-apple-system,sans-serif;background:var(--bg);color:var(--txt);line-height:1.5}
+  .top{background:var(--navy);color:#fff;padding:16px 22px;position:sticky;top:0;z-index:10}
+  .top .kick{color:var(--gold);font-weight:700;letter-spacing:.16em;font-size:.66rem;text-transform:uppercase}
+  .top h1{font-size:1.25rem;margin-top:2px}
+  .top .meta{font-size:.76rem;color:#b9c6d8;margin-top:3px}
+  .wrap{max-width:1080px;margin:0 auto;padding:18px 22px 50px}
+  .controls{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin:18px 0 22px}
+  .controls .grp{display:flex;flex-direction:column;gap:4px}
+  .controls label{font-size:.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+  select,button{font-family:inherit;font-size:.92rem;padding:9px 13px;border:1.5px solid var(--line);border-radius:10px;background:#fff;color:var(--txt);cursor:pointer}
+  .toggle{display:inline-flex;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+  .toggle button{border:none;border-radius:0;background:#fff;font-weight:600;color:var(--muted)}
+  .toggle button.on{background:var(--navy);color:#fff}
+  .reload{margin-left:auto;border-color:var(--navy);color:var(--navy);font-weight:600}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
+  .metric{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 17px}
+  .metric .lab{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+  .metric .val{font-size:1.8rem;font-weight:800;color:var(--navy);margin-top:5px;line-height:1.1}
+  .metric .val small{font-size:.9rem;color:var(--muted);font-weight:600}
+  .metric .note{font-size:.76rem;color:var(--muted);margin-top:3px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:17px;margin-bottom:16px}
+  .panel h2{font-size:1rem;color:var(--navy);margin-bottom:14px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr}.wrap{padding:16px}}
+  .chartbox{position:relative;height:270px}
+  table{width:100%;border-collapse:collapse;font-size:.84rem}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);position:sticky;top:0;background:#fff}
+  .tablewrap{max-height:560px;overflow:auto;border:1px solid var(--line);border-radius:12px}
+  .pill{display:inline-block;padding:2px 8px;border-radius:99px;font-size:.72rem;font-weight:600;background:#EEF2F7;color:var(--navy)}
+  .verb{border:1px solid var(--line);border-radius:11px;padding:12px 14px;margin-bottom:10px;background:#FCFBF8}
+  .verb .who{font-weight:700;color:var(--navy);font-size:.86rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:5px}
+  .verb .who .tag{font-weight:500;color:var(--muted);font-size:.76rem}
+  .verb .q{font-size:.7rem;color:var(--gold);font-weight:700;text-transform:uppercase;margin-top:7px}
+  .verb .a{font-size:.9rem;margin-top:1px}
+  .loading,.empty{text-align:center;color:var(--muted);padding:50px 20px}
+  .spin{width:30px;height:30px;border:3px solid var(--line);border-top-color:var(--gold);border-radius:50%;margin:0 auto 14px;animation:r 1s linear infinite}
+  @keyframes r{to{transform:rotate(360deg)}}
+  .err{background:#FCEBEB;border:1px solid #F09595;color:#A32D2D;padding:14px;border-radius:11px;font-size:.9rem}
+  .hidden{display:none}
+  .tally{display:flex;flex-direction:column;gap:8px}
+  .tally .row{display:flex;align-items:center;gap:10px}
+  .tally .name{font-size:.84rem;width:48%;flex-shrink:0}
+  .tally .bar{flex:1;height:16px;background:#EFEDE6;border-radius:6px;overflow:hidden}
+  .tally .bar span{display:block;height:100%;background:linear-gradient(90deg,var(--navy),var(--navy2))}
+  .tally .cnt{font-size:.8rem;font-weight:700;color:var(--navy);width:26px;text-align:right}
+  .gate{position:fixed;inset:0;background:linear-gradient(160deg,#1F3A5F,#14253c);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+  .gatebox{background:#fff;border-radius:16px;padding:30px 28px;max-width:370px;width:100%;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.3)}
+  .gatebox .kick{color:var(--gold);font-weight:700;letter-spacing:.16em;font-size:.66rem;text-transform:uppercase}
+  .gatebox h2{color:var(--navy);margin:6px 0 8px;font-size:1.3rem}
+  .gatebox p{color:var(--muted);font-size:.88rem;margin-bottom:16px}
+  .gatebox input{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px;font-size:1rem;margin-bottom:12px}
+  .gatebox button{width:100%;background:var(--navy);color:#fff;border:none;border-radius:10px;padding:12px;font-weight:700;font-size:1rem;cursor:pointer}
+  .gateErr{color:#c0392b;font-size:.84rem;margin-top:10px;min-height:18px}
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <div class="gatebox">
+    <div class="kick">QVEMA Amplify · Interne</div>
+    <h2>Pilotage des feedbacks</h2>
+    <p>Espace réservé à l’équipe. Entrez le mot de passe pour accéder aux données.</p>
+    <input type="password" id="pwd" placeholder="Mot de passe" autocomplete="current-password" />
+    <button id="pwdBtn">Accéder</button>
+    <div class="gateErr" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="top">
+  <div class="kick">QVEMA Amplify · Interne</div>
+  <h1>Pilotage des feedbacks</h1>
+  <div class="meta" id="meta">—</div>
+</div>
+
+<div class="wrap">
+  <div class="controls">
+    <div class="grp"><label>Vue</label>
+      <div class="toggle" id="viewToggle">
+        <button data-view="overview" class="on">Vue d’ensemble</button>
+        <button data-view="detail">Vue détaillée</button>
+      </div>
+    </div>
+    <div class="grp"><label>Promo</label><select id="fPromo"><option value="">Toutes les promos</option></select></div>
+    <div class="grp"><label>Module</label><select id="fModule"><option value="">Tous les modules</option></select></div>
+    <button class="reload" id="reload">↻ Recharger</button>
+  </div>
+  <div id="root"><div class="loading"><div class="spin"></div>Lecture des données…</div></div>
+</div>
+
+<script>
+/* ====== CONFIG ====== */
+const ENDPOINT = "https://script.google.com/macros/s/AKfycbzVcNiXd0lAOFtyBWOE4vOaZOj0LHJDqO8zJ_yn6B_nRVtA4mTjfHcR9itlnjL-cAyJnA/exec";
+let PWD = ""; /* saisi par l'utilisateur ; doit correspondre au mot de passe défini dans le script (DATA_KEY) */
+
+let RECORDS=[]; let charts=[]; let view="overview";
+
+function num(v){const n=parseFloat(String(v).replace(',','.'));return isNaN(n)?null:n;}
+function esc(s){const d=document.createElement('div');d.textContent=(s==null?'':s);return d.innerHTML;}
+function moduleOf(tab){const m=String(tab).match(/module\s*(.+)/i);return m?m[1].trim():"0-1";}
+function findKey(obj,re){for(const k in obj){if(re.test(k))return k;}return null;}
+function moduleOrder(m){if(m==="0-1")return 0;const n=parseFloat(m);return isNaN(n)?99:n;}
+
+/* ====== Accès par mot de passe ====== */
+function submitPwd(){
+  const v=document.getElementById('pwd').value;
+  if(!v){return;}
+  document.getElementById('gateErr').textContent='Vérification…';
+  PWD=v; load();
+}
+document.getElementById('pwdBtn').addEventListener('click',submitPwd);
+document.getElementById('pwd').addEventListener('keydown',e=>{if(e.key==='Enter')submitPwd();});
+
+/* ====== Chargement via JSONP (contourne CORS) ====== */
+function load(){
+  if(!PWD){return;}
+  const cb='__qv_'+Date.now();
+  window[cb]=function(resp){try{delete window[cb];}catch(e){} handle(resp);};
+  const s=document.createElement('script');
+  s.src=ENDPOINT+'?action=data&key='+encodeURIComponent(PWD)+'&callback='+cb+'&t='+Date.now();
+  s.onerror=function(){document.getElementById('gateErr').textContent='Impossible de joindre la source de données. Réessayez.';};
+  document.body.appendChild(s);
+}
+
+function handle(resp){
+  if(!resp||!resp.ok){
+    document.getElementById('gate').style.display='flex';
+    var msg=(resp&&/cl[ée]/i.test(resp.error||''))?'Mot de passe incorrect.':'Erreur de lecture des données.';
+    document.getElementById('gateErr').textContent=msg;
+    try{localStorage.removeItem('qvema_pwd');}catch(e){}
+    return;
+  }
+  try{localStorage.setItem('qvema_pwd',PWD);}catch(e){}
+  document.getElementById('gate').style.display='none';
+  document.getElementById('root').innerHTML='<div class="loading"><div class="spin"></div>Mise en forme…</div>';
+
+  RECORDS=[];
+  const tabs=resp.tabs||{};
+  Object.keys(tabs).forEach(tab=>{
+    const mod=moduleOf(tab);
+    (tabs[tab]||[]).forEach(r=>{
+      const kSat=findKey(r,/satisfaction/i), kNps=findKey(r,/recommand/i), kPed=findKey(r,/p[ée]dagogie|niveau|rythme/i);
+      const notes={};
+      Object.keys(r).forEach(k=>{ if(/^note /i.test(k)){ const val=num(r[k]); if(val!=null) notes[k.replace(/^note /i,'')]=val; }});
+      RECORDS.push({
+        module:mod,
+        promo:(r["Promo"]||"").toString().trim()||"Promo 1",
+        sat:kSat?num(r[kSat]):null,
+        nps:kNps?num(r[kNps]):null,
+        ped:kPed?(r[kPed]||"").toString():"",
+        notes:notes,
+        nom:(r["Nom"]||"").toString(), prenom:(r["Prénom"]||r["Prenom"]||"").toString(),
+        email:(r["Email"]||"").toString(),
+        date:(r["Horodatage"]||"").toString().slice(0,10),
+        raw:r
+      });
+    });
+  });
+  const promos=[...new Set(RECORDS.map(r=>r.promo))].sort();
+  const mods=[...new Set(RECORDS.map(r=>r.module))].sort((a,b)=>moduleOrder(a)-moduleOrder(b));
+  fill('fPromo',promos,'Toutes les promos');
+  fill('fModule',mods.map(m=>m==="0-1"?["0-1","Module 0 & 1"]:[m,"Module "+m]),'Tous les modules');
+  const d=resp.generatedAt?new Date(resp.generatedAt):new Date();
+  document.getElementById('meta').textContent=RECORDS.length+" réponses · "+mods.length+" module(s) · "+promos.length+" promo(s) · lu le "+d.toLocaleString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+  render();
+}
+function fill(id,items,allLabel){
+  const sel=document.getElementById(id); const cur=sel.value;
+  sel.innerHTML='<option value="">'+allLabel+'</option>';
+  items.forEach(it=>{const v=Array.isArray(it)?it[0]:it;const t=Array.isArray(it)?it[1]:it;const o=document.createElement('option');o.value=v;o.textContent=t;sel.appendChild(o);});
+  sel.value=cur;
+}
+function filtered(){
+  const p=document.getElementById('fPromo').value, m=document.getElementById('fModule').value;
+  return RECORDS.filter(r=>(!p||r.promo===p)&&(!m||r.module===m));
+}
+function avg(a){const v=a.filter(x=>x!=null);return v.length?v.reduce((s,x)=>s+x,0)/v.length:null;}
+
+/* ====== Rendu ====== */
+function render(){
+  charts.forEach(c=>c.destroy());charts=[];
+  if(!RECORDS.length){document.getElementById('root').innerHTML='<div class="panel"><div class="empty">Aucune donnée pour l’instant.</div></div>';return;}
+  view==="overview"?renderOverview():renderDetail();
+}
+
+function renderOverview(){
+  const f=filtered();
+  const sat=avg(f.map(r=>r.sat)), nps=avg(f.map(r=>r.nps));
+  const npsVals=f.map(r=>r.nps).filter(x=>x!=null);
+  let npsScore=null;
+  if(npsVals.length){const pro=npsVals.filter(x=>x>=9).length,det=npsVals.filter(x=>x<=6).length;npsScore=Math.round((pro-det)/npsVals.length*100);}
+  const fmtAgg={};f.forEach(r=>{for(const k in r.notes){(fmtAgg[k]=fmtAgg[k]||[]).push(r.notes[k]);}});
+  const fmtAvg=Object.keys(fmtAgg).map(k=>[k,avg(fmtAgg[k])]).sort((a,b)=>b[1]-a[1]);
+
+  document.getElementById('root').innerHTML=`
+    <div class="cards">
+      <div class="metric"><div class="lab">Réponses</div><div class="val">${f.length}</div><div class="note">sur le filtre courant</div></div>
+      <div class="metric"><div class="lab">Satisfaction moy.</div><div class="val">${sat!=null?sat.toFixed(1):'—'}<small> / 5</small></div></div>
+      <div class="metric"><div class="lab">NPS moyen</div><div class="val">${nps!=null?nps.toFixed(1):'—'}<small> / 10</small></div><div class="note">${npsScore!=null?'Score NPS : '+npsScore:''}</div></div>
+      <div class="metric"><div class="lab">Format le mieux noté</div><div class="val" style="font-size:1.1rem">${fmtAvg.length?esc(fmtAvg[0][0]):'—'}</div><div class="note">${fmtAvg.length?fmtAvg[0][1].toFixed(1)+' / 5':''}</div></div>
+    </div>
+    <div class="panel"><h2>Évolution de la satisfaction et du NPS par module</h2><div class="chartbox"><canvas id="cTrend"></canvas></div></div>
+    <div class="grid2">
+      <div class="panel"><h2>Comparaison entre promos (satisfaction)</h2><div class="chartbox"><canvas id="cPromo"></canvas></div></div>
+      <div class="panel"><h2>Notation par format ${moduleLabel()}</h2><div class="chartbox"><canvas id="cFmt"></canvas></div></div>
+    </div>
+    <div class="panel"><h2>Niveau / pédagogie ressenti(e)</h2><div id="tPed" class="tally"></div></div>
+  `;
+  const opts={responsive:true,maintainAspectRatio:false};
+  const p=document.getElementById('fPromo').value;
+  const base=RECORDS.filter(r=>!p||r.promo===p);
+  const mods=[...new Set(base.map(r=>r.module))].sort((a,b)=>moduleOrder(a)-moduleOrder(b));
+  const satByMod=mods.map(m=>{const v=avg(base.filter(r=>r.module===m).map(r=>r.sat));return v!=null?+v.toFixed(2):null;});
+  const npsByMod=mods.map(m=>{const v=avg(base.filter(r=>r.module===m).map(r=>r.nps));return v!=null?+v.toFixed(2):null;});
+  charts.push(new Chart(document.getElementById('cTrend'),{type:'line',
+    data:{labels:mods.map(m=>m==="0-1"?"Mod. 0-1":"Mod. "+m),datasets:[
+      {label:'Satisfaction /5',data:satByMod,borderColor:'#1F3A5F',backgroundColor:'#1F3A5F',tension:.3,spanGaps:true,yAxisID:'y'},
+      {label:'NPS /10',data:npsByMod,borderColor:'#C8A24B',backgroundColor:'#C8A24B',tension:.3,spanGaps:true,yAxisID:'y2'}
+    ]},
+    options:{...opts,plugins:{legend:{position:'bottom'}},scales:{y:{min:0,max:5,position:'left',title:{display:true,text:'Satisfaction'}},y2:{min:0,max:10,position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'NPS'}}}}}));
+
+  const allPromos=[...new Set(RECORDS.map(r=>r.promo))].sort();
+  const m2=document.getElementById('fModule').value;
+  const promoBase=RECORDS.filter(r=>!m2||r.module===m2);
+  const satByPromo=allPromos.map(pr=>{const v=avg(promoBase.filter(r=>r.promo===pr).map(r=>r.sat));return v!=null?+v.toFixed(2):0;});
+  charts.push(new Chart(document.getElementById('cPromo'),{type:'bar',
+    data:{labels:allPromos,datasets:[{data:satByPromo,backgroundColor:'#2E5685',borderRadius:6,maxBarThickness:60}]},
+    options:{...opts,plugins:{legend:{display:false}},scales:{y:{min:0,max:5}}}}));
+
+  charts.push(new Chart(document.getElementById('cFmt'),{type:'bar',
+    data:{labels:fmtAvg.map(x=>x[0]),datasets:[{data:fmtAvg.map(x=>+x[1].toFixed(2)),backgroundColor:'#C8A24B',borderRadius:5,maxBarThickness:46}]},
+    options:{...opts,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{min:0,max:5}}}}));
+
+  const ped={};f.forEach(r=>{if(r.ped){ped[r.ped]=(ped[r.ped]||0)+1;}});
+  const pe=Object.entries(ped).sort((a,b)=>b[1]-a[1]);const max=pe.length?pe[0][1]:1;
+  document.getElementById('tPed').innerHTML=pe.length?pe.map(([n,c])=>`<div class="row"><div class="name">${esc(n)}</div><div class="bar"><span style="width:${Math.round(c/max*100)}%"></span></div><div class="cnt">${c}</div></div>`).join(''):'<div class="empty" style="padding:12px">Pas de donnée pédagogie sur ce filtre.</div>';
+}
+function moduleLabel(){const m=document.getElementById('fModule').value;return m?('('+(m==="0-1"?"Module 0 & 1":"Module "+m)+')'):'(tous modules)';}
+
+const VERB_FIELDS=["Le plus apprécié","Le plus apprécié / utile","Frustrations / freins","Attentes prochains modules","Besoin d'accompagnement","Ce qui aiderait à rester engagé","Autre chose à partager","Ce qui a le plus aidé","Avancement validation terrain","Sujets à approfondir","Formats à faire évoluer"];
+
+function renderDetail(){
+  const f=filtered();
+  let rows=f.slice().reverse().map(r=>`<tr>
+    <td>${esc(r.date)}</td>
+    <td><span class="pill">${r.module==="0-1"?"0 & 1":r.module}</span></td>
+    <td>${esc(r.promo)}</td>
+    <td>${esc((r.prenom+' '+r.nom).trim())}</td>
+    <td>${esc(r.email)}</td>
+    <td style="text-align:center">${r.sat!=null?r.sat:'—'}</td>
+    <td style="text-align:center">${r.nps!=null?r.nps:'—'}</td>
+  </tr>`).join('');
+  let verbs=f.slice().reverse().map(r=>{
+    const blocks=VERB_FIELDS.map(k=>{const a=r.raw[k];return (a&&String(a).trim())?`<div class="q">${esc(k)}</div><div class="a">${esc(a)}</div>`:'';}).join('');
+    if(!blocks)return '';
+    const who=esc((r.prenom+' '+r.nom).trim())||'Participant';
+    return `<div class="verb"><div class="who"><span>${who}</span><span class="tag">${r.module==="0-1"?"Module 0 & 1":"Module "+r.module} · ${esc(r.promo)}</span></div>${blocks}</div>`;
+  }).filter(Boolean).join('');
+  document.getElementById('root').innerHTML=`
+    <div class="panel"><h2>Réponses (${f.length})</h2>
+      <div class="tablewrap"><table><thead><tr><th>Date</th><th>Module</th><th>Promo</th><th>Nom</th><th>Email</th><th>Satisf.</th><th>NPS</th></tr></thead><tbody>${rows||'<tr><td colspan="7" class="empty">Aucune réponse.</td></tr>'}</tbody></table></div>
+    </div>
+    <div class="panel"><h2>Verbatims</h2>${verbs||'<div class="empty" style="padding:14px">Aucun verbatim sur ce filtre.</div>'}</div>
+  `;
+}
+
+/* ====== Évènements ====== */
+document.getElementById('viewToggle').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-view]');if(!b)return;
+  view=b.dataset.view;
+  [...document.querySelectorAll('#viewToggle button')].forEach(x=>x.classList.toggle('on',x===b));
+  render();
+});
+document.getElementById('fPromo').addEventListener('change',render);
+document.getElementById('fModule').addEventListener('change',render);
+document.getElementById('reload').addEventListener('click',load);
+
+/* ====== Init : mot de passe mémorisé ? ====== */
+(function(){
+  let saved=null; try{saved=localStorage.getItem('qvema_pwd');}catch(e){}
+  if(saved){ PWD=saved; load(); } /* la fenêtre mot de passe reste affichée tant que ce n'est pas validé */
+})();
+</script>
+</body>
+</html>
