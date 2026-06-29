@@ -6,7 +6,7 @@
 <title>QVEMA Amplify — Pilotage des feedbacks</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js"></script>
 <style>
-  :root{--navy:#1F3A5F;--navy2:#2E5685;--gold:#C8A24B;--bg:#F4F1EA;--card:#fff;--line:#E3E6EB;--txt:#1F2937;--muted:#6B7280;--teal:#1D9E75;--coral:#D85A30;--purple:#7F77DD;}
+  :root{--navy:#1F3A5F;--navy2:#2E5685;--gold:#C8A24B;--bg:#F4F1EA;--card:#fff;--line:#E3E6EB;--txt:#1F2937;--muted:#6B7280;}
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Inter','Segoe UI',-apple-system,sans-serif;background:var(--bg);color:var(--txt);line-height:1.5}
   .top{background:var(--navy);color:#fff;padding:16px 22px;position:sticky;top:0;z-index:10}
@@ -18,7 +18,7 @@
   .controls .grp{display:flex;flex-direction:column;gap:4px}
   .controls label{font-size:.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
   select,button{font-family:inherit;font-size:.92rem;padding:9px 13px;border:1.5px solid var(--line);border-radius:10px;background:#fff;color:var(--txt);cursor:pointer}
-  .toggle{display:inline-flex;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+  .toggle{display:inline-flex;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;flex-wrap:wrap}
   .toggle button{border:none;border-radius:0;background:#fff;font-weight:600;color:var(--muted)}
   .toggle button.on{background:var(--navy);color:#fff}
   .reload{margin-left:auto;border-color:var(--navy);color:var(--navy);font-weight:600}
@@ -30,6 +30,7 @@
   .metric .note{font-size:.76rem;color:var(--muted);margin-top:3px}
   .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:17px;margin-bottom:16px}
   .panel h2{font-size:1rem;color:var(--navy);margin-bottom:14px}
+  .panel h3{font-size:.92rem;color:var(--navy);margin:14px 0 8px}
   .panel .sub{font-size:.76rem;color:var(--muted);font-weight:400;margin-left:6px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   @media(max-width:760px){.grid2{grid-template-columns:1fr}.wrap{padding:16px}}
@@ -55,6 +56,18 @@
   .tally .bar{flex:1;height:16px;background:#EFEDE6;border-radius:6px;overflow:hidden}
   .tally .bar span{display:block;height:100%;background:linear-gradient(90deg,var(--navy),var(--navy2))}
   .tally .cnt{font-size:.8rem;font-weight:700;color:var(--navy);width:26px;text-align:right}
+  .search{width:100%;max-width:360px;padding:10px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:.95rem;margin-bottom:14px}
+  .lcard{border:1px solid var(--line);border-radius:12px;margin-bottom:10px;background:#fff;overflow:hidden}
+  .lhead{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 15px;cursor:pointer}
+  .lhead:hover{background:#F7F9FB}
+  .lhead .nm{font-weight:700;color:var(--navy)}
+  .lhead .em{color:var(--muted);font-size:.83rem}
+  .lhead .badges{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .ldetail{padding:2px 15px 14px;border-top:1px solid var(--line)}
+  .subm{margin-top:12px}
+  .subm .sh{font-weight:700;color:var(--navy);font-size:.88rem;margin-bottom:4px}
+  .kv{font-size:.85rem;padding:4px 0;border-bottom:1px dashed #eee;display:flex;gap:10px}
+  .kv .k{color:var(--muted);min-width:210px;max-width:210px;flex-shrink:0}
   .gate{position:fixed;inset:0;background:linear-gradient(160deg,#1F3A5F,#14253c);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
   .gatebox{background:#fff;border-radius:16px;padding:30px 28px;max-width:370px;width:100%;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.3)}
   .gatebox .kick{color:var(--gold);font-weight:700;letter-spacing:.16em;font-size:.66rem;text-transform:uppercase}
@@ -63,6 +76,17 @@
   .gatebox input{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px;font-size:1rem;margin-bottom:12px}
   .gatebox button{width:100%;background:var(--navy);color:#fff;border:none;border-radius:10px;padding:12px;font-weight:700;font-size:1rem;cursor:pointer}
   .gateErr{color:#c0392b;font-size:.84rem;margin-top:10px;min-height:18px}
+  .rephead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .rephead .t{font-size:1.2rem;font-weight:800;color:var(--navy)}
+  .rephead .s{font-size:.82rem;color:var(--muted)}
+  .btn-print{background:var(--gold);color:#3a2e10;border:none;font-weight:700}
+  @media print{
+    .top,.controls,.gate,.noprint{display:none!important}
+    body{background:#fff}
+    .wrap{padding:0;max-width:none}
+    .panel{break-inside:avoid;border:1px solid #ddd;box-shadow:none;margin-bottom:12px}
+    .cards{break-inside:avoid}
+  }
 </style>
 </head>
 <body>
@@ -89,7 +113,9 @@
     <div class="grp"><label>Vue</label>
       <div class="toggle" id="viewToggle">
         <button data-view="overview" class="on">Vue d’ensemble</button>
-        <button data-view="detail">Vue détaillée</button>
+        <button data-view="learner">Par apprenant</button>
+        <button data-view="report">Compte rendu</button>
+        <button data-view="detail">Détail</button>
       </div>
     </div>
     <div class="grp"><label>Promo</label><select id="fPromo"><option value="">Toutes les promos</option></select></div>
@@ -102,29 +128,27 @@
 <script>
 /* ====== CONFIG ====== */
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzVcNiXd0lAOFtyBWOE4vOaZOj0LHJDqO8zJ_yn6B_nRVtA4mTjfHcR9itlnjL-cAyJnA/exec";
-let PWD = ""; /* saisi par l'utilisateur ; doit correspondre au mot de passe défini dans le script (DATA_KEY) */
+let PWD = "";
 
 let RECORDS=[]; let charts=[]; let view="overview"; let bugCount=0;
+const META_FIELDS=["Horodatage","Module","Promo","Email","Nom","Prénom","Prenom","Date de naissance"];
 
 function num(v){const n=parseFloat(String(v).replace(',','.'));return isNaN(n)?null:n;}
 function esc(s){const d=document.createElement('div');d.textContent=(s==null?'':s);return d.innerHTML;}
 function moduleOf(tab){const m=String(tab).match(/module\s*(.+)/i);return m?m[1].trim():"0-1";}
+function modLabel(m){return m==="0-1"?"Module 0 & 1":"Module "+m;}
 function findKey(obj,re){for(const k in obj){if(re.test(k))return k;}return null;}
 function moduleOrder(m){if(m==="0-1")return 0;const n=parseFloat(m);return isNaN(n)?99:n;}
+function avg(a){const v=a.filter(x=>x!=null);return v.length?v.reduce((s,x)=>s+x,0)/v.length:null;}
 
 /* ====== Accès par mot de passe ====== */
-function submitPwd(){
-  const v=document.getElementById('pwd').value;
-  if(!v){return;}
-  document.getElementById('gateErr').textContent='Vérification…';
-  PWD=v; load();
-}
+function submitPwd(){const v=document.getElementById('pwd').value;if(!v)return;document.getElementById('gateErr').textContent='Vérification…';PWD=v;load();}
 document.getElementById('pwdBtn').addEventListener('click',submitPwd);
 document.getElementById('pwd').addEventListener('keydown',e=>{if(e.key==='Enter')submitPwd();});
 
-/* ====== Chargement via JSONP (contourne CORS) ====== */
+/* ====== Chargement JSONP ====== */
 function load(){
-  if(!PWD){return;}
+  if(!PWD)return;
   const cb='__qv_'+Date.now();
   window[cb]=function(resp){try{delete window[cb];}catch(e){} handle(resp);};
   const s=document.createElement('script');
@@ -132,20 +156,17 @@ function load(){
   s.onerror=function(){document.getElementById('gateErr').textContent='Impossible de joindre la source de données. Réessayez.';};
   document.body.appendChild(s);
 }
-
 function handle(resp){
   if(!resp||!resp.ok){
     document.getElementById('gate').style.display='flex';
-    var msg=(resp&&/cl[ée]/i.test(resp.error||''))?'Mot de passe incorrect.':'Erreur de lecture des données.';
-    document.getElementById('gateErr').textContent=msg;
+    document.getElementById('gateErr').textContent=(resp&&/cl[ée]/i.test(resp.error||''))?'Mot de passe incorrect.':'Erreur de lecture des données.';
     try{localStorage.removeItem('qvema_pwd');}catch(e){}
     return;
   }
   try{localStorage.setItem('qvema_pwd',PWD);}catch(e){}
   document.getElementById('gate').style.display='none';
   document.getElementById('root').innerHTML='<div class="loading"><div class="spin"></div>Mise en forme…</div>';
-
-  RECORDS=[]; bugCount=0;
+  RECORDS=[];bugCount=0;
   const tabs=resp.tabs||{};
   Object.keys(tabs).forEach(tab=>{
     const mod=moduleOf(tab);
@@ -153,62 +174,50 @@ function handle(resp){
       const kSat=findKey(r,/satisfaction/i), kNps=findKey(r,/recommand/i), kPed=findKey(r,/p[ée]dagogie|niveau|rythme/i);
       const notes={};
       Object.keys(r).forEach(k=>{ if(/^note /i.test(k)){ const val=num(r[k]); if(val!=null) notes[k.replace(/^note /i,'')]=val; }});
-      const rec={
-        module:mod,
-        promo:(r["Promo"]||"").toString().trim()||"Promo 1",
-        sat:kSat?num(r[kSat]):null,
-        nps:kNps?num(r[kNps]):null,
-        ped:kPed?(r[kPed]||"").toString():"",
-        notes:notes,
-        nom:(r["Nom"]||"").toString(), prenom:(r["Prénom"]||r["Prenom"]||"").toString(),
-        email:(r["Email"]||"").toString(),
-        date:(r["Horodatage"]||"").toString().slice(0,10),
-        raw:r, bug:false
-      };
-      /* Bug Module 0/1 : satisfaction + toutes les notes valent 1 -> on exclut ces notes (on garde la réponse + verbatims) */
+      const rec={module:mod,promo:(r["Promo"]||"").toString().trim()||"Promo 1",
+        sat:kSat?num(r[kSat]):null,nps:kNps?num(r[kNps]):null,ped:kPed?(r[kPed]||"").toString():"",
+        notes:notes,nom:(r["Nom"]||"").toString(),prenom:(r["Prénom"]||r["Prenom"]||"").toString(),
+        email:(r["Email"]||"").toString(),date:(r["Horodatage"]||"").toString().slice(0,10),raw:r,bug:false};
       const _nums=[rec.sat].concat(Object.keys(rec.notes).map(k=>rec.notes[k])).filter(x=>x!=null);
-      if(rec.module==="0-1" && _nums.length>=6 && _nums.every(x=>x===1)){
-        rec.bug=true; rec.sat=null; rec.nps=null; rec.ped=""; rec.notes={}; bugCount++;
-      }
+      if(rec.module==="0-1" && _nums.length>=6 && _nums.every(x=>x===1)){rec.bug=true;rec.sat=null;rec.nps=null;rec.ped="";rec.notes={};bugCount++;}
       RECORDS.push(rec);
     });
   });
   const promos=[...new Set(RECORDS.map(r=>r.promo))].sort();
   const mods=[...new Set(RECORDS.map(r=>r.module))].sort((a,b)=>moduleOrder(a)-moduleOrder(b));
   fill('fPromo',promos,'Toutes les promos');
-  fill('fModule',mods.map(m=>m==="0-1"?["0-1","Module 0 & 1"]:[m,"Module "+m]),'Tous les modules');
+  fill('fModule',mods.map(m=>[m,modLabel(m)]),'Tous les modules');
   const d=resp.generatedAt?new Date(resp.generatedAt):new Date();
   document.getElementById('meta').textContent=RECORDS.length+" réponses · "+mods.length+" module(s) · "+promos.length+" promo(s)"+(bugCount?" · "+bugCount+" notes buguées exclues":"")+" · lu le "+d.toLocaleString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
   render();
 }
 function fill(id,items,allLabel){
-  const sel=document.getElementById(id); const cur=sel.value;
+  const sel=document.getElementById(id);const cur=sel.value;
   sel.innerHTML='<option value="">'+allLabel+'</option>';
   items.forEach(it=>{const v=Array.isArray(it)?it[0]:it;const t=Array.isArray(it)?it[1]:it;const o=document.createElement('option');o.value=v;o.textContent=t;sel.appendChild(o);});
   sel.value=cur;
 }
 function filtered(){
-  const p=document.getElementById('fPromo').value, m=document.getElementById('fModule').value;
+  const p=document.getElementById('fPromo').value,m=document.getElementById('fModule').value;
   return RECORDS.filter(r=>(!p||r.promo===p)&&(!m||r.module===m));
 }
-function avg(a){const v=a.filter(x=>x!=null);return v.length?v.reduce((s,x)=>s+x,0)/v.length:null;}
 
 /* ====== Rendu ====== */
 function render(){
   charts.forEach(c=>c.destroy());charts=[];
   if(!RECORDS.length){document.getElementById('root').innerHTML='<div class="panel"><div class="empty">Aucune donnée pour l’instant.</div></div>';return;}
-  view==="overview"?renderOverview():renderDetail();
+  if(view==="overview")renderOverview();
+  else if(view==="learner")renderLearner();
+  else if(view==="report")renderReport();
+  else renderDetail();
 }
 
 function renderOverview(){
   const f=filtered();
-  const sat=avg(f.map(r=>r.sat)), nps=avg(f.map(r=>r.nps));
-  const npsVals=f.map(r=>r.nps).filter(x=>x!=null);
-  let npsScore=null;
+  const sat=avg(f.map(r=>r.sat)),nps=avg(f.map(r=>r.nps));
+  const npsVals=f.map(r=>r.nps).filter(x=>x!=null);let npsScore=null;
   if(npsVals.length){const pro=npsVals.filter(x=>x>=9).length,det=npsVals.filter(x=>x<=6).length;npsScore=Math.round((pro-det)/npsVals.length*100);}
-  const fmtAgg={};f.forEach(r=>{for(const k in r.notes){(fmtAgg[k]=fmtAgg[k]||[]).push(r.notes[k]);}});
-  const fmtAvg=Object.keys(fmtAgg).map(k=>[k,avg(fmtAgg[k])]).sort((a,b)=>b[1]-a[1]);
-
+  const fmtAvg=formatRanking(f);
   document.getElementById('root').innerHTML=`
     <div class="cards">
       <div class="metric"><div class="lab">Réponses</div><div class="val">${f.length}</div><div class="note">sur le filtre courant</div></div>
@@ -219,84 +228,122 @@ function renderOverview(){
     <div class="panel"><h2>Évolution de la satisfaction et du NPS par module</h2><div class="chartbox"><canvas id="cTrend"></canvas></div></div>
     <div class="grid2">
       <div class="panel"><h2>Comparaison entre promos (satisfaction)</h2><div class="chartbox"><canvas id="cPromo"></canvas></div></div>
-      <div class="panel"><h2>Notation par format <span class="sub">${moduleLabel()}</span></h2><div class="chartbox"><canvas id="cFmt"></canvas></div></div>
-    </div>
-    <div class="panel"><h2>Niveau / pédagogie ressenti(e)</h2><div id="tPed" class="tally"></div></div>
-  `;
+      <div class="panel"><h2>Notation par format <span class="sub">${moduleLabelTxt()}</span></h2><div class="chartbox"><canvas id="cFmt"></canvas></div></div>
+    </div>`;
   const opts={responsive:true,maintainAspectRatio:false};
   const p=document.getElementById('fPromo').value;
   const base=RECORDS.filter(r=>!p||r.promo===p);
   const mods=[...new Set(base.map(r=>r.module))].sort((a,b)=>moduleOrder(a)-moduleOrder(b));
-  const satByMod=mods.map(m=>{const v=avg(base.filter(r=>r.module===m).map(r=>r.sat));return v!=null?+v.toFixed(2):null;});
-  const npsByMod=mods.map(m=>{const v=avg(base.filter(r=>r.module===m).map(r=>r.nps));return v!=null?+v.toFixed(2):null;});
   charts.push(new Chart(document.getElementById('cTrend'),{type:'line',
     data:{labels:mods.map(m=>m==="0-1"?"Mod. 0-1":"Mod. "+m),datasets:[
-      {label:'Satisfaction /5',data:satByMod,borderColor:'#1F3A5F',backgroundColor:'#1F3A5F',tension:.3,spanGaps:true,yAxisID:'y'},
-      {label:'NPS /10',data:npsByMod,borderColor:'#C8A24B',backgroundColor:'#C8A24B',tension:.3,spanGaps:true,yAxisID:'y2'}
-    ]},
-    options:{...opts,plugins:{legend:{position:'bottom'}},scales:{y:{min:0,max:5,position:'left',title:{display:true,text:'Satisfaction'}},y2:{min:0,max:10,position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'NPS'}}}}}));
-
+      {label:'Satisfaction /5',data:mods.map(m=>{const v=avg(base.filter(r=>r.module===m).map(r=>r.sat));return v!=null?+v.toFixed(2):null;}),borderColor:'#1F3A5F',backgroundColor:'#1F3A5F',tension:.3,spanGaps:true,yAxisID:'y'},
+      {label:'NPS /10',data:mods.map(m=>{const v=avg(base.filter(r=>r.module===m).map(r=>r.nps));return v!=null?+v.toFixed(2):null;}),borderColor:'#C8A24B',backgroundColor:'#C8A24B',tension:.3,spanGaps:true,yAxisID:'y2'}
+    ]},options:{...opts,plugins:{legend:{position:'bottom'}},scales:{y:{min:0,max:5,position:'left'},y2:{min:0,max:10,position:'right',grid:{drawOnChartArea:false}}}}}));
   const allPromos=[...new Set(RECORDS.map(r=>r.promo))].sort();
-  const m2=document.getElementById('fModule').value;
-  const promoBase=RECORDS.filter(r=>!m2||r.module===m2);
-  const satByPromo=allPromos.map(pr=>{const v=avg(promoBase.filter(r=>r.promo===pr).map(r=>r.sat));return v!=null?+v.toFixed(2):0;});
+  const m2=document.getElementById('fModule').value;const promoBase=RECORDS.filter(r=>!m2||r.module===m2);
   charts.push(new Chart(document.getElementById('cPromo'),{type:'bar',
-    data:{labels:allPromos,datasets:[{data:satByPromo,backgroundColor:'#2E5685',borderRadius:6,maxBarThickness:60}]},
+    data:{labels:allPromos,datasets:[{data:allPromos.map(pr=>{const v=avg(promoBase.filter(r=>r.promo===pr).map(r=>r.sat));return v!=null?+v.toFixed(2):0;}),backgroundColor:'#2E5685',borderRadius:6,maxBarThickness:60}]},
     options:{...opts,plugins:{legend:{display:false}},scales:{y:{min:0,max:5}}}}));
-
   charts.push(new Chart(document.getElementById('cFmt'),{type:'bar',
     data:{labels:fmtAvg.map(x=>x[0]),datasets:[{data:fmtAvg.map(x=>+x[1].toFixed(2)),backgroundColor:'#C8A24B',borderRadius:5,maxBarThickness:46}]},
     options:{...opts,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{min:0,max:5}}}}));
-
-  const ped={};f.forEach(r=>{if(r.ped){ped[r.ped]=(ped[r.ped]||0)+1;}});
-  const pe=Object.entries(ped).sort((a,b)=>b[1]-a[1]);const max=pe.length?pe[0][1]:1;
-  document.getElementById('tPed').innerHTML=pe.length?pe.map(([n,c])=>`<div class="row"><div class="name">${esc(n)}</div><div class="bar"><span style="width:${Math.round(c/max*100)}%"></span></div><div class="cnt">${c}</div></div>`).join(''):'<div class="empty" style="padding:12px">Pas de donnée pédagogie sur ce filtre.</div>';
 }
-function moduleLabel(){const m=document.getElementById('fModule').value;return m?('('+(m==="0-1"?"Module 0 & 1":"Module "+m)+')'):'(tous modules)';}
+function formatRanking(f){const agg={};f.forEach(r=>{for(const k in r.notes){(agg[k]=agg[k]||[]).push(r.notes[k]);}});return Object.keys(agg).map(k=>[k,avg(agg[k])]).sort((a,b)=>b[1]-a[1]);}
+function moduleLabelTxt(){const m=document.getElementById('fModule').value;return m?('('+modLabel(m)+')'):'(tous modules)';}
 
-const VERB_FIELDS=["Le plus apprécié","Le plus apprécié / utile","Frustrations / freins","Attentes prochains modules","Besoin d'accompagnement","Ce qui aiderait à rester engagé","Autre chose à partager","Ce qui a le plus aidé","Avancement validation terrain","Sujets à approfondir","Formats à faire évoluer"];
+/* ====== Par apprenant ====== */
+function renderLearner(){
+  const p=document.getElementById('fPromo').value;
+  const base=RECORDS.filter(r=>!p||r.promo===p);
+  const map={};
+  base.forEach(r=>{const key=((r.email||'').toLowerCase())||((r.prenom+' '+r.nom).trim().toLowerCase())||'?';
+    if(!map[key])map[key]={name:(r.prenom+' '+r.nom).trim()||r.email||'—',email:r.email,recs:[]};map[key].recs.push(r);});
+  const people=Object.values(map).sort((a,b)=>a.name.localeCompare(b.name,'fr'));
+  document.getElementById('root').innerHTML=`
+    <input class="search" id="lsearch" placeholder="🔎 Rechercher un apprenant (nom ou email)…" />
+    <div id="llist"></div>`;
+  function draw(q){
+    q=(q||'').toLowerCase();
+    const list=people.filter(pp=>!q||pp.name.toLowerCase().includes(q)||(pp.email||'').toLowerCase().includes(q));
+    document.getElementById('llist').innerHTML=list.length?list.map((pp,idx)=>{
+      const mods=pp.recs.map(r=>r.module).sort((a,b)=>moduleOrder(a)-moduleOrder(b)).map(m=>'<span class="pill">'+(m==="0-1"?"0 & 1":m)+'</span>').join(' ');
+      const detail=pp.recs.slice().sort((a,b)=>moduleOrder(a.module)-moduleOrder(b.module)).map(r=>{
+        const kvs=Object.keys(r.raw).filter(k=>META_FIELDS.indexOf(k)<0 && String(r.raw[k]).trim()!=='').map(k=>`<div class="kv"><div class="k">${esc(k)}</div><div>${esc(r.raw[k])}</div></div>`).join('');
+        return `<div class="subm"><div class="sh">${esc(modLabel(r.module))} · ${esc(r.promo)} · ${esc(r.date)}</div>${kvs||'<div class="kv"><div>—</div></div>'}</div>`;
+      }).join('');
+      return `<div class="lcard"><div class="lhead" data-i="${idx}"><span class="nm">${esc(pp.name)}</span><span class="em">${esc(pp.email)}</span><span class="badges">${mods} <span class="pill" style="background:#1F3A5F;color:#fff">${pp.recs.length} rép.</span></span></div><div class="ldetail hidden">${detail}</div></div>`;
+    }).join(''):'<div class="empty">Aucun apprenant trouvé.</div>';
+    // reattach (list rebuilt per filter, indexes match filtered list)
+    [...document.querySelectorAll('#llist .lhead')].forEach(h=>h.addEventListener('click',()=>{h.nextElementSibling.classList.toggle('hidden');}));
+  }
+  draw('');
+  document.getElementById('lsearch').addEventListener('input',e=>draw(e.target.value));
+}
 
+/* ====== Compte rendu (imprimable) ====== */
+const VERB_TEXT=["Le plus apprécié","Le plus apprécié / utile","Frustrations / freins","Attentes prochains modules","Besoin d'accompagnement","Ce qui aiderait à rester engagé","Autre chose à partager"];
+const MULTI_FIELDS=["Avancement validation terrain","Ce qui a le plus aidé","Sujets à approfondir","Formats à faire évoluer"];
+
+function renderReport(){
+  const f=filtered();
+  const sat=avg(f.map(r=>r.sat)),nps=avg(f.map(r=>r.nps));
+  const npsVals=f.map(r=>r.nps).filter(x=>x!=null);let npsScore=null;
+  if(npsVals.length){const pro=npsVals.filter(x=>x>=9).length,det=npsVals.filter(x=>x<=6).length;npsScore=Math.round((pro-det)/npsVals.length*100);}
+  const fmtAvg=formatRanking(f);
+  // pédagogie
+  const ped={};f.forEach(r=>{if(r.ped)ped[r.ped]=(ped[r.ped]||0)+1;});
+  const pedHtml=Object.entries(ped).sort((a,b)=>b[1]-a[1]).map(([n,c])=>`<div class="kv"><div class="k">${esc(n)}</div><div>${c} (${Math.round(100*c/f.length)}%)</div></div>`).join('')||'<div class="kv"><div>—</div></div>';
+  // multi-choix
+  let multiHtml='';
+  MULTI_FIELDS.forEach(field=>{
+    const t={};let any=false;
+    f.forEach(r=>{const v=r.raw[field];if(v&&String(v).trim()){any=true;String(v).split(' ; ').forEach(x=>{x=x.trim();if(x)t[x]=(t[x]||0)+1;});}});
+    if(any){const e=Object.entries(t).sort((a,b)=>b[1]-a[1]);const max=e[0][1];
+      multiHtml+=`<h3>${esc(field)}</h3><div class="tally">`+e.map(([n,c])=>`<div class="row"><div class="name">${esc(n)}</div><div class="bar"><span style="width:${Math.round(c/max*100)}%"></span></div><div class="cnt">${c}</div></div>`).join('')+`</div>`;}
+  });
+  // verbatims groupés par question
+  let verbHtml='';
+  VERB_TEXT.forEach(field=>{
+    const ans=f.map(r=>({a:r.raw[field],who:(r.prenom+' '+r.nom).trim()})).filter(o=>o.a&&String(o.a).trim());
+    if(ans.length){verbHtml+=`<h3>${esc(field)} <span class="sub">(${ans.length})</span></h3>`+ans.map(o=>`<div class="verb"><div class="a">${esc(o.a)}</div><div class="who" style="margin:6px 0 0"><span class="tag">— ${esc(o.who||'Participant')}</span></div></div>`).join('');}
+  });
+
+  document.getElementById('root').innerHTML=`
+    <div class="panel">
+      <div class="rephead">
+        <div><div class="t">Compte rendu — ${esc(reportScope())}</div><div class="s">${f.length} réponse(s) · généré le ${new Date().toLocaleDateString('fr-FR')}</div></div>
+        <button class="btn-print noprint" onclick="window.print()">🖨 Imprimer / PDF</button>
+      </div>
+      <div class="cards">
+        <div class="metric"><div class="lab">Réponses</div><div class="val">${f.length}</div></div>
+        <div class="metric"><div class="lab">Satisfaction moy.</div><div class="val">${sat!=null?sat.toFixed(1):'—'}<small> / 5</small></div></div>
+        <div class="metric"><div class="lab">NPS moyen</div><div class="val">${nps!=null?nps.toFixed(1):'—'}<small> / 10</small></div><div class="note">${npsScore!=null?'Score NPS : '+npsScore:''}</div></div>
+        <div class="metric"><div class="lab">Format le mieux noté</div><div class="val" style="font-size:1.05rem">${fmtAvg.length?esc(fmtAvg[0][0]):'—'}</div><div class="note">${fmtAvg.length?fmtAvg[0][1].toFixed(1)+' / 5':''}</div></div>
+      </div>
+      <h3>Notation par format</h3>
+      ${fmtAvg.length?'<table><thead><tr><th>Format</th><th>Note moyenne / 5</th></tr></thead><tbody>'+fmtAvg.map(x=>`<tr><td>${esc(x[0])}</td><td>${x[1].toFixed(2)}</td></tr>`).join('')+'</tbody></table>':'<p class="s">Pas de notation sur ce filtre.</p>'}
+      <h3>Niveau / pédagogie</h3>${pedHtml}
+      ${multiHtml}
+    </div>
+    <div class="panel"><h2>Verbatims</h2>${verbHtml||'<div class="empty">Aucun verbatim sur ce filtre.</div>'}</div>`;
+}
+function reportScope(){const m=document.getElementById('fModule').value,p=document.getElementById('fPromo').value;return (m?modLabel(m):'Tous modules')+' · '+(p||'Toutes promos');}
+
+/* ====== Détail ====== */
 function renderDetail(){
   const f=filtered();
-  let rows=f.slice().reverse().map(r=>`<tr>
-    <td>${esc(r.date)}</td>
-    <td><span class="pill">${r.module==="0-1"?"0 & 1":r.module}</span></td>
-    <td>${esc(r.promo)}</td>
-    <td>${esc((r.prenom+' '+r.nom).trim())}</td>
-    <td>${esc(r.email)}</td>
-    <td style="text-align:center">${r.sat!=null?r.sat:'—'}</td>
-    <td style="text-align:center">${r.nps!=null?r.nps:'—'}</td>
-  </tr>`).join('');
-  let verbs=f.slice().reverse().map(r=>{
-    const blocks=VERB_FIELDS.map(k=>{const a=r.raw[k];return (a&&String(a).trim())?`<div class="q">${esc(k)}</div><div class="a">${esc(a)}</div>`:'';}).join('');
-    if(!blocks)return '';
-    const who=esc((r.prenom+' '+r.nom).trim())||'Participant';
-    return `<div class="verb"><div class="who"><span>${who}</span><span class="tag">${r.module==="0-1"?"Module 0 & 1":"Module "+r.module} · ${esc(r.promo)}</span></div>${blocks}</div>`;
-  }).filter(Boolean).join('');
-  document.getElementById('root').innerHTML=`
-    <div class="panel"><h2>Réponses (${f.length})</h2>
-      <div class="tablewrap"><table><thead><tr><th>Date</th><th>Module</th><th>Promo</th><th>Nom</th><th>Email</th><th>Satisf.</th><th>NPS</th></tr></thead><tbody>${rows||'<tr><td colspan="7" class="empty">Aucune réponse.</td></tr>'}</tbody></table></div>
-    </div>
-    <div class="panel"><h2>Verbatims</h2>${verbs||'<div class="empty" style="padding:14px">Aucun verbatim sur ce filtre.</div>'}</div>
-  `;
+  const rows=f.slice().reverse().map(r=>`<tr><td>${esc(r.date)}</td><td><span class="pill">${r.module==="0-1"?"0 & 1":r.module}</span></td><td>${esc(r.promo)}</td><td>${esc((r.prenom+' '+r.nom).trim())}</td><td>${esc(r.email)}</td><td style="text-align:center">${r.sat!=null?r.sat:'—'}</td><td style="text-align:center">${r.nps!=null?r.nps:'—'}</td></tr>`).join('');
+  document.getElementById('root').innerHTML=`<div class="panel"><h2>Réponses (${f.length})</h2><div class="tablewrap"><table><thead><tr><th>Date</th><th>Module</th><th>Promo</th><th>Nom</th><th>Email</th><th>Satisf.</th><th>NPS</th></tr></thead><tbody>${rows||'<tr><td colspan="7" class="empty">Aucune réponse.</td></tr>'}</tbody></table></div></div>`;
 }
 
 /* ====== Évènements ====== */
-document.getElementById('viewToggle').addEventListener('click',e=>{
-  const b=e.target.closest('button[data-view]');if(!b)return;
-  view=b.dataset.view;
-  [...document.querySelectorAll('#viewToggle button')].forEach(x=>x.classList.toggle('on',x===b));
-  render();
-});
+document.getElementById('viewToggle').addEventListener('click',e=>{const b=e.target.closest('button[data-view]');if(!b)return;view=b.dataset.view;[...document.querySelectorAll('#viewToggle button')].forEach(x=>x.classList.toggle('on',x===b));render();});
 document.getElementById('fPromo').addEventListener('change',render);
 document.getElementById('fModule').addEventListener('change',render);
 document.getElementById('reload').addEventListener('click',load);
 
-/* ====== Init : mot de passe mémorisé ? ====== */
-(function(){
-  let saved=null; try{saved=localStorage.getItem('qvema_pwd');}catch(e){}
-  if(saved){ PWD=saved; load(); }
-})();
+/* ====== Init ====== */
+(function(){let saved=null;try{saved=localStorage.getItem('qvema_pwd');}catch(e){}if(saved){PWD=saved;load();}})();
 </script>
 </body>
 </html>
