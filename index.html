@@ -30,6 +30,7 @@
   .metric .note{font-size:.76rem;color:var(--muted);margin-top:3px}
   .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:17px;margin-bottom:16px}
   .panel h2{font-size:1rem;color:var(--navy);margin-bottom:14px}
+  .panel .sub{font-size:.76rem;color:var(--muted);font-weight:400;margin-left:6px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   @media(max-width:760px){.grid2{grid-template-columns:1fr}.wrap{padding:16px}}
   .chartbox{position:relative;height:270px}
@@ -103,7 +104,7 @@
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzVcNiXd0lAOFtyBWOE4vOaZOj0LHJDqO8zJ_yn6B_nRVtA4mTjfHcR9itlnjL-cAyJnA/exec";
 let PWD = ""; /* saisi par l'utilisateur ; doit correspondre au mot de passe défini dans le script (DATA_KEY) */
 
-let RECORDS=[]; let charts=[]; let view="overview";
+let RECORDS=[]; let charts=[]; let view="overview"; let bugCount=0;
 
 function num(v){const n=parseFloat(String(v).replace(',','.'));return isNaN(n)?null:n;}
 function esc(s){const d=document.createElement('div');d.textContent=(s==null?'':s);return d.innerHTML;}
@@ -144,7 +145,7 @@ function handle(resp){
   document.getElementById('gate').style.display='none';
   document.getElementById('root').innerHTML='<div class="loading"><div class="spin"></div>Mise en forme…</div>';
 
-  RECORDS=[];
+  RECORDS=[]; bugCount=0;
   const tabs=resp.tabs||{};
   Object.keys(tabs).forEach(tab=>{
     const mod=moduleOf(tab);
@@ -152,7 +153,7 @@ function handle(resp){
       const kSat=findKey(r,/satisfaction/i), kNps=findKey(r,/recommand/i), kPed=findKey(r,/p[ée]dagogie|niveau|rythme/i);
       const notes={};
       Object.keys(r).forEach(k=>{ if(/^note /i.test(k)){ const val=num(r[k]); if(val!=null) notes[k.replace(/^note /i,'')]=val; }});
-      RECORDS.push({
+      const rec={
         module:mod,
         promo:(r["Promo"]||"").toString().trim()||"Promo 1",
         sat:kSat?num(r[kSat]):null,
@@ -162,8 +163,14 @@ function handle(resp){
         nom:(r["Nom"]||"").toString(), prenom:(r["Prénom"]||r["Prenom"]||"").toString(),
         email:(r["Email"]||"").toString(),
         date:(r["Horodatage"]||"").toString().slice(0,10),
-        raw:r
-      });
+        raw:r, bug:false
+      };
+      /* Bug Module 0/1 : satisfaction + toutes les notes valent 1 -> on exclut ces notes (on garde la réponse + verbatims) */
+      const _nums=[rec.sat].concat(Object.keys(rec.notes).map(k=>rec.notes[k])).filter(x=>x!=null);
+      if(rec.module==="0-1" && _nums.length>=6 && _nums.every(x=>x===1)){
+        rec.bug=true; rec.sat=null; rec.nps=null; rec.ped=""; rec.notes={}; bugCount++;
+      }
+      RECORDS.push(rec);
     });
   });
   const promos=[...new Set(RECORDS.map(r=>r.promo))].sort();
@@ -171,7 +178,7 @@ function handle(resp){
   fill('fPromo',promos,'Toutes les promos');
   fill('fModule',mods.map(m=>m==="0-1"?["0-1","Module 0 & 1"]:[m,"Module "+m]),'Tous les modules');
   const d=resp.generatedAt?new Date(resp.generatedAt):new Date();
-  document.getElementById('meta').textContent=RECORDS.length+" réponses · "+mods.length+" module(s) · "+promos.length+" promo(s) · lu le "+d.toLocaleString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+  document.getElementById('meta').textContent=RECORDS.length+" réponses · "+mods.length+" module(s) · "+promos.length+" promo(s)"+(bugCount?" · "+bugCount+" notes buguées exclues":"")+" · lu le "+d.toLocaleString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
   render();
 }
 function fill(id,items,allLabel){
@@ -212,7 +219,7 @@ function renderOverview(){
     <div class="panel"><h2>Évolution de la satisfaction et du NPS par module</h2><div class="chartbox"><canvas id="cTrend"></canvas></div></div>
     <div class="grid2">
       <div class="panel"><h2>Comparaison entre promos (satisfaction)</h2><div class="chartbox"><canvas id="cPromo"></canvas></div></div>
-      <div class="panel"><h2>Notation par format ${moduleLabel()}</h2><div class="chartbox"><canvas id="cFmt"></canvas></div></div>
+      <div class="panel"><h2>Notation par format <span class="sub">${moduleLabel()}</span></h2><div class="chartbox"><canvas id="cFmt"></canvas></div></div>
     </div>
     <div class="panel"><h2>Niveau / pédagogie ressenti(e)</h2><div id="tPed" class="tally"></div></div>
   `;
@@ -288,7 +295,7 @@ document.getElementById('reload').addEventListener('click',load);
 /* ====== Init : mot de passe mémorisé ? ====== */
 (function(){
   let saved=null; try{saved=localStorage.getItem('qvema_pwd');}catch(e){}
-  if(saved){ PWD=saved; load(); } /* la fenêtre mot de passe reste affichée tant que ce n'est pas validé */
+  if(saved){ PWD=saved; load(); }
 })();
 </script>
 </body>
