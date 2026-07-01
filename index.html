@@ -6,7 +6,7 @@
 <title>QVEMA Amplify — Pilotage des feedbacks</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js"></script>
 <style>
-  :root{--navy:#1F3A5F;--navy2:#2E5685;--gold:#C8A24B;--bg:#F4F1EA;--card:#fff;--line:#E3E6EB;--txt:#1F2937;--muted:#6B7280;}
+  :root{--navy:#1F3A5F;--navy2:#2E5685;--gold:#C8A24B;--bg:#F4F1EA;--card:#fff;--line:#E3E6EB;--txt:#1F2937;--muted:#6B7280;--teal:#1D9E75;}
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Inter','Segoe UI',-apple-system,sans-serif;background:var(--bg);color:var(--txt);line-height:1.5}
   .top{background:var(--navy);color:#fff;padding:16px 22px;position:sticky;top:0;z-index:10}
@@ -80,13 +80,7 @@
   .rephead .t{font-size:1.2rem;font-weight:800;color:var(--navy)}
   .rephead .s{font-size:.82rem;color:var(--muted)}
   .btn-print{background:var(--gold);color:#3a2e10;border:none;font-weight:700}
-  @media print{
-    .top,.controls,.gate,.noprint{display:none!important}
-    body{background:#fff}
-    .wrap{padding:0;max-width:none}
-    .panel{break-inside:avoid;border:1px solid #ddd;box-shadow:none;margin-bottom:12px}
-    .cards{break-inside:avoid}
-  }
+  @media print{.top,.controls,.gate,.noprint{display:none!important}body{background:#fff}.wrap{padding:0;max-width:none}.panel{break-inside:avoid;border:1px solid #ddd;box-shadow:none;margin-bottom:12px}.cards{break-inside:avoid}}
 </style>
 </head>
 <body>
@@ -113,6 +107,7 @@
     <div class="grp"><label>Vue</label>
       <div class="toggle" id="viewToggle">
         <button data-view="overview" class="on">Vue d’ensemble</button>
+        <button data-view="profile">Profil promo</button>
         <button data-view="learner">Par apprenant</button>
         <button data-view="report">Compte rendu</button>
         <button data-view="detail">Détail</button>
@@ -140,6 +135,7 @@ function modLabel(m){return m==="0-1"?"Module 0 & 1":"Module "+m;}
 function findKey(obj,re){for(const k in obj){if(re.test(k))return k;}return null;}
 function moduleOrder(m){if(m==="0-1")return 0;const n=parseFloat(m);return isNaN(n)?99:n;}
 function avg(a){const v=a.filter(x=>x!=null);return v.length?v.reduce((s,x)=>s+x,0)/v.length:null;}
+function median(a){if(!a.length)return null;const s=a.slice().sort((x,y)=>x-y);const n=s.length;return n%2?s[(n-1)/2]:Math.round((s[n/2-1]+s[n/2])/2);}
 
 /* ====== Accès par mot de passe ====== */
 function submitPwd(){const v=document.getElementById('pwd').value;if(!v)return;document.getElementById('gateErr').textContent='Vérification…';PWD=v;load();}
@@ -207,10 +203,14 @@ function render(){
   charts.forEach(c=>c.destroy());charts=[];
   if(!RECORDS.length){document.getElementById('root').innerHTML='<div class="panel"><div class="empty">Aucune donnée pour l’instant.</div></div>';return;}
   if(view==="overview")renderOverview();
+  else if(view==="profile")renderProfile();
   else if(view==="learner")renderLearner();
   else if(view==="report")renderReport();
   else renderDetail();
 }
+
+function formatRanking(f){const agg={};f.forEach(r=>{for(const k in r.notes){(agg[k]=agg[k]||[]).push(r.notes[k]);}});return Object.keys(agg).map(k=>[k,avg(agg[k])]).sort((a,b)=>b[1]-a[1]);}
+function moduleLabelTxt(){const m=document.getElementById('fModule').value;return m?('('+modLabel(m)+')'):'(tous modules)';}
 
 function renderOverview(){
   const f=filtered();
@@ -248,8 +248,55 @@ function renderOverview(){
     data:{labels:fmtAvg.map(x=>x[0]),datasets:[{data:fmtAvg.map(x=>+x[1].toFixed(2)),backgroundColor:'#C8A24B',borderRadius:5,maxBarThickness:46}]},
     options:{...opts,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{min:0,max:5}}}}));
 }
-function formatRanking(f){const agg={};f.forEach(r=>{for(const k in r.notes){(agg[k]=agg[k]||[]).push(r.notes[k]);}});return Object.keys(agg).map(k=>[k,avg(agg[k])]).sort((a,b)=>b[1]-a[1]);}
-function moduleLabelTxt(){const m=document.getElementById('fModule').value;return m?('('+modLabel(m)+')'):'(tous modules)';}
+
+/* ====== Profil promo (démographie, collectée au Module 0/1) ====== */
+function renderProfile(){
+  const p=document.getElementById('fPromo').value;
+  const base=RECORDS.filter(r=>(!p||r.promo===p) && (String(r.raw["Date de naissance"]||'')!=='' || String(r.raw["Sexe"]||'')!=='' || String(r.raw["Département"]||'')!==''));
+  if(!base.length){document.getElementById('root').innerHTML='<div class="panel"><div class="empty">Aucune donnée de profil pour ce filtre.<br><span class="sub">Le profil (âge, sexe, département, type de projet) est collecté au formulaire d’onboarding (Module 0/1).</span></div></div>';return;}
+  const now=new Date();
+  const ages=[];
+  base.forEach(r=>{const dob=String(r.raw["Date de naissance"]||'');const m=dob.match(/(\d{4})-(\d{2})-(\d{2})/);if(m){const y=+m[1],mo=+m[2],d=+m[3];if(y>=1930&&y<now.getFullYear()){let a=now.getFullYear()-y;if(now.getMonth()+1<mo||(now.getMonth()+1===mo&&now.getDate()<d))a--;ages.push(a);}}});
+  const ageMean=ages.length?(ages.reduce((s,x)=>s+x,0)/ages.length):null;
+  const reliable=base.filter(r=>!r.bug);
+  const sx={};reliable.forEach(r=>{const s=String(r.raw["Sexe"]||'').trim();if(s)sx[s]=(sx[s]||0)+1;});
+  const sxTot=Object.values(sx).reduce((s,x)=>s+x,0);
+  const femmes=sx["Femme"]||0;
+  const buckets={'< 25':0,'25-34':0,'35-44':0,'45-54':0,'55+':0};
+  ages.forEach(a=>{if(a<25)buckets['< 25']++;else if(a<35)buckets['25-34']++;else if(a<45)buckets['35-44']++;else if(a<55)buckets['45-54']++;else buckets['55+']++;});
+  const dep={};base.forEach(r=>{const d=String(r.raw["Département"]||'').trim();if(d)dep[d]=(dep[d]||0)+1;});
+  const depE=Object.entries(dep).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  const proj={};base.forEach(r=>{const t=String(r.raw["Type de projet"]||'').trim();if(t)proj[t]=(proj[t]||0)+1;});
+  const projE=Object.entries(proj).sort((a,b)=>b[1]-a[1]);
+  const promoTxt=p||'Toutes les promos';
+
+  document.getElementById('root').innerHTML=`
+    <div class="cards">
+      <div class="metric"><div class="lab">Personnes (${esc(promoTxt)})</div><div class="val">${base.length}</div><div class="note">profils renseignés</div></div>
+      <div class="metric"><div class="lab">Âge moyen</div><div class="val">${ageMean!=null?Math.round(ageMean):'—'}<small> ans</small></div><div class="note">${ages.length?'médiane '+median(ages)+' · '+Math.min(...ages)+'–'+Math.max(...ages)+' ans':''}</div></div>
+      <div class="metric"><div class="lab">Femmes</div><div class="val">${sxTot?Math.round(100*femmes/sxTot)+'%':'—'}</div><div class="note">${sxTot?femmes+' / '+sxTot+' (sexe fiable)':''}</div></div>
+      <div class="metric"><div class="lab">Hommes</div><div class="val">${sxTot?Math.round(100*(sx["Homme"]||0)/sxTot)+'%':'—'}</div><div class="note">${sxTot?(sx["Homme"]||0)+' / '+sxTot:''}</div></div>
+    </div>
+    <div class="grid2">
+      <div class="panel"><h2>Répartition par sexe <span class="sub">(sexe fiable, ${bugCount?bugCount+' réponses buguées exclues':'complet'})</span></h2><div class="chartbox"><canvas id="cSexe"></canvas></div></div>
+      <div class="panel"><h2>Répartition par âge</h2><div class="chartbox"><canvas id="cAge"></canvas></div></div>
+    </div>
+    <div class="panel"><h2>Répartition par département <span class="sub">(top 12)</span></h2><div class="chartbox"><canvas id="cDep"></canvas></div></div>
+    <div class="panel"><h2>Type de projet</h2><div id="tProj" class="tally"></div></div>
+  `;
+  const opts={responsive:true,maintainAspectRatio:false};
+  charts.push(new Chart(document.getElementById('cSexe'),{type:'doughnut',
+    data:{labels:Object.keys(sx),datasets:[{data:Object.values(sx),backgroundColor:['#2E5685','#C8A24B','#B4B2A9','#1D9E75']}]},
+    options:{...opts,plugins:{legend:{position:'bottom'}},cutout:'58%'}}));
+  charts.push(new Chart(document.getElementById('cAge'),{type:'bar',
+    data:{labels:Object.keys(buckets),datasets:[{data:Object.values(buckets),backgroundColor:'#1F3A5F',borderRadius:6,maxBarThickness:60}]},
+    options:{...opts,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}}));
+  charts.push(new Chart(document.getElementById('cDep'),{type:'bar',
+    data:{labels:depE.map(x=>x[0]),datasets:[{data:depE.map(x=>x[1]),backgroundColor:'#C8A24B',borderRadius:5,maxBarThickness:34}]},
+    options:{...opts,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1}}}}}));
+  const box=document.getElementById('tProj');const max=projE.length?projE[0][1]:1;
+  box.innerHTML=projE.length?projE.map(([n,c])=>`<div class="row"><div class="name">${esc(n)}</div><div class="bar"><span style="width:${Math.round(c/max*100)}%"></span></div><div class="cnt">${c}</div></div>`).join(''):'<div class="empty" style="padding:12px">—</div>';
+}
 
 /* ====== Par apprenant ====== */
 function renderLearner(){
@@ -259,21 +306,18 @@ function renderLearner(){
   base.forEach(r=>{const key=((r.email||'').toLowerCase())||((r.prenom+' '+r.nom).trim().toLowerCase())||'?';
     if(!map[key])map[key]={name:(r.prenom+' '+r.nom).trim()||r.email||'—',email:r.email,recs:[]};map[key].recs.push(r);});
   const people=Object.values(map).sort((a,b)=>a.name.localeCompare(b.name,'fr'));
-  document.getElementById('root').innerHTML=`
-    <input class="search" id="lsearch" placeholder="🔎 Rechercher un apprenant (nom ou email)…" />
-    <div id="llist"></div>`;
+  document.getElementById('root').innerHTML=`<input class="search" id="lsearch" placeholder="🔎 Rechercher un apprenant (nom ou email)…" /><div id="llist"></div>`;
   function draw(q){
     q=(q||'').toLowerCase();
     const list=people.filter(pp=>!q||pp.name.toLowerCase().includes(q)||(pp.email||'').toLowerCase().includes(q));
-    document.getElementById('llist').innerHTML=list.length?list.map((pp,idx)=>{
+    document.getElementById('llist').innerHTML=list.length?list.map(pp=>{
       const mods=pp.recs.map(r=>r.module).sort((a,b)=>moduleOrder(a)-moduleOrder(b)).map(m=>'<span class="pill">'+(m==="0-1"?"0 & 1":m)+'</span>').join(' ');
       const detail=pp.recs.slice().sort((a,b)=>moduleOrder(a.module)-moduleOrder(b.module)).map(r=>{
         const kvs=Object.keys(r.raw).filter(k=>META_FIELDS.indexOf(k)<0 && String(r.raw[k]).trim()!=='').map(k=>`<div class="kv"><div class="k">${esc(k)}</div><div>${esc(r.raw[k])}</div></div>`).join('');
         return `<div class="subm"><div class="sh">${esc(modLabel(r.module))} · ${esc(r.promo)} · ${esc(r.date)}</div>${kvs||'<div class="kv"><div>—</div></div>'}</div>`;
       }).join('');
-      return `<div class="lcard"><div class="lhead" data-i="${idx}"><span class="nm">${esc(pp.name)}</span><span class="em">${esc(pp.email)}</span><span class="badges">${mods} <span class="pill" style="background:#1F3A5F;color:#fff">${pp.recs.length} rép.</span></span></div><div class="ldetail hidden">${detail}</div></div>`;
+      return `<div class="lcard"><div class="lhead"><span class="nm">${esc(pp.name)}</span><span class="em">${esc(pp.email)}</span><span class="badges">${mods} <span class="pill" style="background:#1F3A5F;color:#fff">${pp.recs.length} rép.</span></span></div><div class="ldetail hidden">${detail}</div></div>`;
     }).join(''):'<div class="empty">Aucun apprenant trouvé.</div>';
-    // reattach (list rebuilt per filter, indexes match filtered list)
     [...document.querySelectorAll('#llist .lhead')].forEach(h=>h.addEventListener('click',()=>{h.nextElementSibling.classList.toggle('hidden');}));
   }
   draw('');
@@ -290,10 +334,8 @@ function renderReport(){
   const npsVals=f.map(r=>r.nps).filter(x=>x!=null);let npsScore=null;
   if(npsVals.length){const pro=npsVals.filter(x=>x>=9).length,det=npsVals.filter(x=>x<=6).length;npsScore=Math.round((pro-det)/npsVals.length*100);}
   const fmtAvg=formatRanking(f);
-  // pédagogie
   const ped={};f.forEach(r=>{if(r.ped)ped[r.ped]=(ped[r.ped]||0)+1;});
   const pedHtml=Object.entries(ped).sort((a,b)=>b[1]-a[1]).map(([n,c])=>`<div class="kv"><div class="k">${esc(n)}</div><div>${c} (${Math.round(100*c/f.length)}%)</div></div>`).join('')||'<div class="kv"><div>—</div></div>';
-  // multi-choix
   let multiHtml='';
   MULTI_FIELDS.forEach(field=>{
     const t={};let any=false;
@@ -301,13 +343,11 @@ function renderReport(){
     if(any){const e=Object.entries(t).sort((a,b)=>b[1]-a[1]);const max=e[0][1];
       multiHtml+=`<h3>${esc(field)}</h3><div class="tally">`+e.map(([n,c])=>`<div class="row"><div class="name">${esc(n)}</div><div class="bar"><span style="width:${Math.round(c/max*100)}%"></span></div><div class="cnt">${c}</div></div>`).join('')+`</div>`;}
   });
-  // verbatims groupés par question
   let verbHtml='';
   VERB_TEXT.forEach(field=>{
     const ans=f.map(r=>({a:r.raw[field],who:(r.prenom+' '+r.nom).trim()})).filter(o=>o.a&&String(o.a).trim());
     if(ans.length){verbHtml+=`<h3>${esc(field)} <span class="sub">(${ans.length})</span></h3>`+ans.map(o=>`<div class="verb"><div class="a">${esc(o.a)}</div><div class="who" style="margin:6px 0 0"><span class="tag">— ${esc(o.who||'Participant')}</span></div></div>`).join('');}
   });
-
   document.getElementById('root').innerHTML=`
     <div class="panel">
       <div class="rephead">
